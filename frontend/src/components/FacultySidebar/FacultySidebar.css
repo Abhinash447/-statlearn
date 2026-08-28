@@ -1,0 +1,145 @@
+.faculty-sidebar {
+  width: 270px;
+  min-height: 100vh;
+  background: #101827;
+  color: #eef3ff;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 18px;
+  box-sizing: border-box;
+  z-index: 100;
+}
+
+.faculty-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px 30px;
+}
+
+.faculty-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: #15b8aa;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.faculty-brand strong {
+  display: block;
+  font-size: 18px;
+}
+
+.faculty-brand small {
+  display: block;
+  color: #8e9bb2;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.faculty-section-title {
+  color: #71809a;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0 12px 12px;
+}
+
+.faculty-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.faculty-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 46px;
+  padding: 0 13px;
+  border-radius: 10px;
+  color: #dce4f2;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+.faculty-nav-item:hover {
+  background: #1a2537;
+}
+
+.faculty-nav-item.active {
+  background: #0e8f85;
+  color: #ffffff;
+  box-shadow: inset 3px 0 #35e1d2;
+}
+
+.faculty-nav-icon {
+  width: 24px;
+  text-align: center;
+  font-size: 17px;
+}
+
+.faculty-bottom {
+  margin-top: auto;
+  border-top: 1px solid #293448;
+  padding-top: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.faculty-bottom-item {
+  border: 0;
+  background: transparent;
+  color: #dce4f2;
+  min-height: 44px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.faculty-bottom-item:hover {
+  background: #1a2537;
+}
+
+@media (max-width: 850px) {
+  .faculty-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 650px) {
+  .faculty-sidebar {
+    width: 70px;
+    padding: 20px 10px;
+  }
+
+  .faculty-brand > div:last-child,
+  .faculty-section-title,
+  .faculty-nav-item span:last-child,
+  .faculty-bottom-item span {
+    display: none;
+  }
+
+  .faculty-brand {
+    justify-content: center;
+    padding: 0 0 25px;
+  }
+
+  .faculty-nav-item,
+  .faculty-bottom-item {
+    justify-content: center;
+    padding: 0;
+  }
+}

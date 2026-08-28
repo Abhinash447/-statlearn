@@ -1,0 +1,617 @@
+/* =========================================
+   FACULTY DASHBOARD
+========================================= */
+
+.fa-page {
+  min-height: 100vh;
+  width: 100%;
+  background: #f5f7fb;
+  color: #172033;
+  display: flex;
+}
+
+
+/* =========================================
+   SIDEBAR AREA
+========================================= */
+
+.faculty-sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+
+  position: fixed;
+  left: 0;
+  top: 0;
+
+  z-index: 1000;
+}
+
+
+/* =========================================
+   MAIN CONTENT WRAPPER
+========================================= */
+
+.fa-content {
+  width: calc(100% - 260px);
+  min-height: 100vh;
+
+  margin-left: 260px;
+
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.fa-header {
+  width: 100%;
+  min-height: 74px;
+
+  background: #ffffff;
+  border-bottom: 1px solid #e7ebf2;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 0 40px;
+
+  box-sizing: border-box;
+}
+
+.fa-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.fa-brand div {
+  width: 34px;
+  height: 34px;
+
+  border-radius: 10px;
+
+  background: #5969e8;
+  color: #ffffff;
+
+  display: grid;
+  place-items: center;
+}
+
+.fa-user {
+  text-align: right;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.fa-user strong {
+  font-size: 14px;
+}
+
+.fa-user small {
+  color: #788499;
+  font-size: 12px;
+}
+
+
+/* =========================================
+   MAIN
+========================================= */
+
+.fa-main {
+  width: 100%;
+  max-width: 1180px;
+
+  margin: 0 auto;
+
+  padding: 38px 28px;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================
+   INTRO
+========================================= */
+
+.fa-intro {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 25px;
+
+  margin-bottom: 25px;
+}
+
+.fa-intro h1 {
+  font-size: 32px;
+
+  margin: 4px 0 8px;
+
+  line-height: 1.2;
+}
+
+.fa-intro p:last-child {
+  color: #6e7a8e;
+
+  margin: 0;
+
+  line-height: 1.6;
+}
+
+.eyebrow {
+  color: #5969e8 !important;
+
+  font-size: 12px !important;
+
+  font-weight: 800;
+
+  letter-spacing: 0.08em;
+
+  margin: 0 !important;
+}
+
+.fa-intro button {
+  border: 1px solid #dfe4ec;
+
+  background: #ffffff;
+
+  color: #2c374b;
+
+  padding: 10px 15px;
+
+  border-radius: 9px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  transition: 0.2s ease;
+}
+
+.fa-intro button:hover {
+  background: #f5f7fb;
+
+  border-color: #5969e8;
+
+  color: #5969e8;
+}
+
+
+/* =========================================
+   STATISTICS
+========================================= */
+
+.fa-stats {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 15px;
+
+  margin-bottom: 20px;
+}
+
+.fa-stats > div {
+  background: #ffffff;
+
+  border: 1px solid #e5e9f1;
+
+  border-radius: 17px;
+
+  padding: 20px;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  transition: transform 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.fa-stats > div:hover {
+  transform: translateY(-2px);
+
+  box-shadow: 0 8px 25px rgba(23, 32, 51, 0.06);
+}
+
+.fa-stats span,
+.fa-stats small {
+  display: block;
+
+  color: #788499;
+
+  font-size: 13px;
+}
+
+.fa-stats strong {
+  display: block;
+
+  font-size: 29px;
+
+  margin: 9px 0;
+}
+
+.fa-stats small {
+  color: #5969e8;
+}
+
+
+/* =========================================
+   CONTENT GRID
+========================================= */
+
+.fa-grid {
+  display: grid;
+
+  grid-template-columns: 320px minmax(0, 1fr);
+
+  gap: 20px;
+
+  align-items: start;
+}
+
+
+/* =========================================
+   PANELS
+========================================= */
+
+.fa-panel {
+  background: #ffffff;
+
+  border: 1px solid #e5e9f1;
+
+  border-radius: 17px;
+
+  padding: 20px;
+
+  box-sizing: border-box;
+}
+
+.fa-panel h2 {
+  margin: 0 0 18px;
+
+  font-size: 18px;
+}
+
+
+/* =========================================
+   QUICK ACTION BUTTONS
+========================================= */
+
+.fa-panel > button {
+  display: block;
+
+  width: 100%;
+
+  padding: 13px;
+
+  text-align: left;
+
+  background: #f5f7fb;
+
+  border: 1px solid #e5e9f1;
+
+  border-radius: 10px;
+
+  margin-bottom: 10px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+
+  color: #2c374b;
+
+  transition: 0.2s ease;
+}
+
+.fa-panel > button:hover {
+  background: #eef0ff;
+
+  border-color: #5969e8;
+
+  color: #5969e8;
+
+  transform: translateX(2px);
+}
+
+.fa-panel > button:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =========================================
+   RECENT ACTIVITY HEADER
+========================================= */
+
+.panel-head {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  gap: 15px;
+}
+
+.panel-head h2 {
+  margin-bottom: 0;
+}
+
+.panel-head p {
+  margin: 4px 0 14px;
+
+  color: #7a8597;
+
+  font-size: 13px;
+}
+
+.panel-head span {
+  font-size: 10px;
+
+  font-weight: 900;
+
+  color: #2e9a68;
+
+  background: #e9f8f0;
+
+  padding: 6px 9px;
+
+  height: fit-content;
+
+  border-radius: 99px;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================
+   ACTIVITY
+========================================= */
+
+.activity {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 13px 0;
+
+  border-top: 1px solid #edf0f5;
+}
+
+.activity-avatar {
+  width: 36px;
+  min-width: 36px;
+
+  height: 36px;
+
+  border-radius: 50%;
+
+  background: #eef0ff;
+
+  color: #5969e8;
+
+  display: grid;
+
+  place-items: center;
+
+  font-weight: 900;
+
+  font-size: 12px;
+}
+
+.activity div:nth-child(2) {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.activity strong {
+  font-size: 13px;
+}
+
+.activity p {
+  margin: 4px 0 0;
+
+  color: #7a8597;
+
+  font-size: 12px;
+
+  line-height: 1.4;
+}
+
+.activity b {
+  font-size: 12px;
+
+  color: #5969e8;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================
+   LOADING
+========================================= */
+
+.faculty-loading {
+  min-height: 100vh;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background: #f5f7fb;
+
+  color: #5969e8;
+
+  font-weight: 700;
+}
+
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1100px) {
+
+  .fa-main {
+    padding: 30px 22px;
+  }
+
+  .fa-header {
+    padding: 0 25px;
+  }
+
+  .fa-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+}
+
+
+/* =========================================
+   SMALL TABLET
+========================================= */
+
+@media (max-width: 850px) {
+
+  .fa-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fa-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fa-intro {
+    align-items: flex-start;
+  }
+
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 550px) {
+
+  /*
+     Sidebar becomes hidden on mobile.
+     You can later add a hamburger menu.
+  */
+
+  .faculty-sidebar {
+    width: 0;
+
+    min-width: 0;
+
+    overflow: hidden;
+  }
+
+  .fa-content {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .fa-header {
+    min-height: 65px;
+
+    padding: 0 16px;
+  }
+
+  .fa-brand {
+    font-size: 17px;
+  }
+
+  .fa-brand div {
+    width: 30px;
+    height: 30px;
+  }
+
+  .fa-main {
+    padding: 24px 16px;
+  }
+
+  .fa-intro {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 15px;
+  }
+
+  .fa-intro h1 {
+    font-size: 25px;
+  }
+
+  .fa-intro button {
+    width: 100%;
+  }
+
+  .fa-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .fa-user {
+    display: none;
+  }
+
+  .fa-panel {
+    padding: 16px;
+  }
+
+  .activity {
+    align-items: flex-start;
+  }
+
+  .activity b {
+    margin-left: auto;
+  }
+
+}
+
+
+/* =========================================
+   VERY SMALL MOBILE
+========================================= */
+
+@media (max-width: 380px) {
+
+  .fa-main {
+    padding: 20px 12px;
+  }
+
+  .fa-intro h1 {
+    font-size: 22px;
+  }
+
+  .fa-stats strong {
+    font-size: 25px;
+  }
+
+  .activity p {
+    font-size: 11px;
+  }
+
+}
