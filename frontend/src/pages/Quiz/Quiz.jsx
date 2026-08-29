@@ -101,7 +101,9 @@ export default function Quiz() {
 
   const findTrainingMaterial = async () => {
     const response = await fetch(
-      `${API_URL}/training`,
+      `${API_URL}/training?skill=${encodeURIComponent(
+        skill
+      )}&level=${encodeURIComponent(level)}`,
       {
         method: "GET",
         credentials: "include",
@@ -112,56 +114,17 @@ export default function Quiz() {
 
     if (!response.ok) {
       throw new Error(
-        data.message ||
-          "Failed to fetch training materials."
+        data.message || "Failed to fetch training material."
       );
     }
 
-    /*
-      Your training controller may return:
+    const materials = data.materials || [];
 
-      {
-        materials: [...]
-      }
-
-      or:
-
-      {
-        trainingMaterials: [...]
-      }
-
-      or:
-
-      {
-        data: [...]
-      }
-
-      We support all three.
-    */
-
-    const materials =
-      data.materials ||
-      data.trainingMaterials ||
-      data.data ||
-      [];
-
-    if (!Array.isArray(materials)) {
-      throw new Error(
-        "Invalid training material response."
-      );
+    if (!materials.length) {
+      return null;
     }
 
-    const matchingMaterial =
-      materials.find(
-        (material) =>
-          material.skill?.toLowerCase() ===
-            skill.toLowerCase() &&
-          material.level?.toLowerCase() ===
-            level.toLowerCase() &&
-          material.isActive !== false
-      );
-
-    return matchingMaterial;
+    return materials[0];
   };
 
   // ==========================================
@@ -285,34 +248,34 @@ export default function Quiz() {
       }
 
       if (
-        !quizData.questions ||
-        quizData.questions.length === 0
-      ) {
-        throw new Error(
-          "AI generated quiz contains no questions."
-        );
-      }
+  !quizData.quiz ||
+  !Array.isArray(quizData.quiz.questions) ||
+  quizData.quiz.questions.length === 0
+) {
+  throw new Error(
+    "AI generated quiz contains no questions."
+  );
+}
 
-      // ======================================
-      // STEP 4
-      // STORE QUIZ
-      // ======================================
+    // ======================================
+    // STEP 4
+    // STORE QUIZ
+    // ======================================
 
-      setQuizId(quizData.quizId);
+    const generatedQuiz = quizData.quiz;
 
-      setQuestions(
-        quizData.questions
-      );
+    setQuizId(generatedQuiz.quizId);
 
-      setAnswers(
-        new Array(
-          quizData.questions.length
-        ).fill(null)
-      );
+    setQuestions(generatedQuiz.questions);
 
-      setQuestionIndex(0);
+    setAnswers(
+      new Array(
+        generatedQuiz.questions.length
+      ).fill(null)
+    );
 
-      setResult(null);
+    setQuestionIndex(0);
+    setResult(null);
 
     } catch (err) {
       console.error(

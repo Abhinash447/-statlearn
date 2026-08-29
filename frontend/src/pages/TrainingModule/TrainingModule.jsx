@@ -574,7 +574,7 @@ export default function TrainingModule() {
             </button>
           </main>
         )}
-      </div>
+      </div>  
     </div>
   );
 }
