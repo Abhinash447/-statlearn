@@ -1,76 +1,69 @@
-import jwt from "jsonwebtoken";
-import User from "../models/User.js";
+  import jwt from "jsonwebtoken";
+  import User from "../models/User.js";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "fallback_secret_key_skillforge";
+  const JWT_SECRET = process.env.JWT_SECRET;
 
-export const protect = async (req, res, next) => {
-  try {
-    let token = null;
+  export const protect = async (req, res, next) => {
+    try {
+      if (!JWT_SECRET) {
+        console.error("JWT_SECRET is not configured.");
 
-    // ==========================================
-    // 1. CHECK HTTP-ONLY COOKIE
-    // ==========================================
+        return res.status(500).json({
+          message: "Server authentication configuration error.",
+        });
+      }
 
-    if (req.cookies && req.cookies.token) {
-      token = req.cookies.token;
-    }
+      let token = null;
 
-    // ==========================================
-    // 2. ALSO SUPPORT BEARER TOKEN
-    // ==========================================
+      if (req.cookies?.token) {
+        token = req.cookies.token;
+      }
 
-    if (
-      !token &&
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer ")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+      if (
+        !token &&
+        req.headers.authorization?.startsWith("Bearer ")
+      ) {
+        token = req.headers.authorization.split(" ")[1];
+      }
 
-    // ==========================================
-    // 3. NO TOKEN
-    // ==========================================
+      if (!token) {
+        return res.status(401).json({
+          message: "Not authorized, no token provided.",
+        });
+      }
 
-    if (!token) {
+      const decoded = jwt.verify(
+        token,
+        JWT_SECRET
+      );
+
+      if (!decoded?.id) {
+        return res.status(401).json({
+          message: "Not authorized, invalid token.",
+        });
+      }
+
+      const user = await User.findById(
+        decoded.id
+      ).select("-password");
+
+      if (!user) {
+        return res.status(401).json({
+          message: "Not authorized, user not found.",
+        });
+      }
+
+      req.user = user;
+
+      next();
+    } catch (error) {
+      console.error(
+        "Auth middleware error:",
+        error.message
+      );
+
       return res.status(401).json({
-        message: "Not authorized, no token provided",
+        message: "Not authorized, token failed.",
       });
     }
-
-    // ==========================================
-    // 4. VERIFY TOKEN
-    // ==========================================
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    // ==========================================
-    // 5. FIND USER
-    // ==========================================
-
-    const user = await User.findById(decoded.id).select(
-      "-password"
-    );
-
-    if (!user) {
-      return res.status(401).json({
-        message: "Not authorized, user not found",
-      });
-    }
-
-    // ==========================================
-    // 6. ATTACH USER TO REQUEST
-    // ==========================================
-
-    req.user = user;
-
-    next();
-
-  } catch (error) {
-    console.error("Auth middleware error:", error.message);
-
-    return res.status(401).json({
-      message: "Not authorized, token failed",
-    });
-  }
-};
+  };

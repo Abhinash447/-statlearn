@@ -1,12 +1,12 @@
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
 import { connectDB } from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
-import profileRoutes from "./routes/profileRoutes.js";
 import assessmentRoutes from "./routes/assessmentRoutes.js";
 import skillRoutes from "./routes/skillRoutes.js";
 import recommendRoutes from "./routes/recommendRoutes.js";
@@ -14,8 +14,6 @@ import aiRoutes from "./routes/aiRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import quizRoutes from "./routes/quizRoutes.js";
 import trainingRoutes from "./routes/trainingRoutes.js";
-
-dotenv.config();
 
 const app = express();
 
@@ -41,7 +39,6 @@ app.use("/api/v1", recommendRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/quizzes", quizRoutes);
 app.use("/api/v1/training", trainingRoutes);
-
 
 app.get("/", (req, res) => {
   res.json({

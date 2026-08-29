@@ -1,78 +1,105 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
 import questionBank from "../../data/questionBank";
-
 import "./SkillAssessment.css";
 
 const API_URL = "http://localhost:5000/api/v1";
+
+function shuffleQuestions(array) {
+  const shuffled = [...array];
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(
+      Math.random() * (i + 1)
+    );
+
+    [shuffled[i], shuffled[j]] = [
+      shuffled[j],
+      shuffled[i],
+    ];
+  }
+
+  return shuffled;
+}
 
 function SkillAssessment() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { skill, level } = location.state || {};
+  const { skill, level } =
+    location.state || {};
 
-  // ==========================================
-  // GET QUESTIONS
-  // ==========================================
-
-  const questions = useMemo(() => {
+  const availableQuestions = useMemo(() => {
     if (!skill || !level) {
       return [];
     }
 
-    return questionBank?.[skill]?.[level] || [];
+    return (
+      questionBank?.[skill]?.[level] || []
+    );
   }, [skill, level]);
 
-  // ==========================================
-  // STATE
-  // ==========================================
+  const [questions, setQuestions] =
+    useState([]);
 
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestion, setCurrentQuestion] =
+    useState(0);
 
   const [selectedAnswer, setSelectedAnswer] =
     useState("");
 
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] =
+    useState([]);
 
   const [submitting, setSubmitting] =
     useState(false);
 
-  const [error, setError] = useState("");
-
-  // ==========================================
-  // VALIDATE ASSESSMENT
-  // ==========================================
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     if (
       !skill ||
       !level ||
-      questions.length === 0
+      !availableQuestions.length
     ) {
       navigate("/skill-selection", {
         replace: true,
       });
+
+      return;
     }
+
+    const shuffled =
+      shuffleQuestions(
+        availableQuestions
+      );
+
+    const selected =
+      shuffled.slice(
+        0,
+        Math.min(10, shuffled.length)
+      );
+
+    setQuestions(selected);
+    setCurrentQuestion(0);
+    setSelectedAnswer("");
+    setAnswers([]);
+    setError("");
   }, [
     skill,
     level,
-    questions.length,
+    availableQuestions,
     navigate,
   ]);
 
   if (
     !skill ||
     !level ||
-    questions.length === 0
+    !questions.length
   ) {
     return null;
   }
-
-  // ==========================================
-  // CURRENT QUESTION
-  // ==========================================
 
   const question =
     questions[currentQuestion];
@@ -82,28 +109,24 @@ function SkillAssessment() {
       questions.length) *
     100;
 
-  // ==========================================
-  // NEXT / SUBMIT
-  // ==========================================
-
   const handleNext = async () => {
-    if (!selectedAnswer || submitting) {
+    if (
+      !selectedAnswer ||
+      submitting
+    ) {
       return;
     }
 
     setError("");
 
-    // Save current answer
-    const updatedAnswers = [...answers];
+    const updatedAnswers = [
+      ...answers,
+    ];
 
     updatedAnswers[currentQuestion] =
       selectedAnswer;
 
     setAnswers(updatedAnswers);
-
-    // ========================================
-    // NEXT QUESTION
-    // ========================================
 
     if (
       currentQuestion <
@@ -121,31 +144,22 @@ function SkillAssessment() {
       return;
     }
 
-    // ========================================
-    // CALCULATE SCORE
-    // ========================================
-
     const score =
       updatedAnswers.reduce(
-        (total, answer, index) => {
-          return (
-            total +
-            (answer ===
-            questions[index]?.answer
-              ? 1
-              : 0)
-          );
-        },
+        (total, answer, index) =>
+          total +
+          (answer ===
+          questions[index]?.answer
+            ? 1
+            : 0),
         0
       );
 
     const percentage = Math.round(
-      (score / questions.length) * 100
+      (score /
+        questions.length) *
+        100
     );
-
-    // ========================================
-    // SAVE TO BACKEND
-    // ========================================
 
     try {
       setSubmitting(true);
@@ -154,14 +168,11 @@ function SkillAssessment() {
         `${API_URL}/assessments`,
         {
           method: "POST",
-
           headers: {
             "Content-Type":
               "application/json",
           },
-
           credentials: "include",
-
           body: JSON.stringify({
             skill,
             level,
@@ -178,9 +189,17 @@ function SkillAssessment() {
         await response.json();
 
       console.log(
-        "Assessment save response:",
+        "Assessment API response:",
         data
       );
+
+      if (response.status === 401) {
+        navigate("/login", {
+          replace: true,
+        });
+
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -189,23 +208,21 @@ function SkillAssessment() {
         );
       }
 
-      // ========================================
-      // GO TO RESULT
-      // ========================================
+      const assessmentId =
+        data.assessment?._id;
 
-      if (!data.assessment?._id) {
+      if (!assessmentId) {
         throw new Error(
-          "Assessment ID was not returned by the server."
+          "Assessment ID was not returned by server."
         );
       }
 
       navigate(
-        `/assessment-result/${data.assessment._id}`,
+        `/assessment-result/${assessmentId}`,
         {
           replace: true,
         }
       );
-
     } catch (error) {
       console.error(
         "Assessment submission error:",
@@ -221,10 +238,6 @@ function SkillAssessment() {
     }
   };
 
-  // ==========================================
-  // PREVIOUS
-  // ==========================================
-
   const handlePrevious = () => {
     if (currentQuestion === 0) {
       return;
@@ -233,40 +246,33 @@ function SkillAssessment() {
     const previousIndex =
       currentQuestion - 1;
 
-    setCurrentQuestion(previousIndex);
+    setCurrentQuestion(
+      previousIndex
+    );
 
     setSelectedAnswer(
       answers[previousIndex] || ""
     );
   };
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <div className="assessment-page">
-
       <div className="assessment-container">
-
-        {/* ==================================
-            TOP
-        ================================== */}
-
         <div className="assessment-top">
-
           <button
             type="button"
             className="back-btn"
             onClick={() =>
-              navigate("/skill-selection")
+              navigate(
+                "/skill-selection"
+              )
             }
+            disabled={submitting}
           >
             ← Back
           </button>
 
           <div className="assessment-title">
-
             <h2>
               {skill} Assessment
             </h2>
@@ -275,34 +281,22 @@ function SkillAssessment() {
               {level} Level •{" "}
               {questions.length} Questions
             </p>
-
           </div>
 
           <span className="question-count">
             {currentQuestion + 1} /{" "}
             {questions.length}
           </span>
-
         </div>
 
-        {/* ==================================
-            PROGRESS
-        ================================== */}
-
         <div className="progress">
-
           <div
             className="progress-fill"
             style={{
               width: `${progress}%`,
             }}
           />
-
         </div>
-
-        {/* ==================================
-            ERROR
-        ================================== */}
 
         {error && (
           <div className="assessment-error">
@@ -310,43 +304,38 @@ function SkillAssessment() {
           </div>
         )}
 
-        {/* ==================================
-            QUESTION
-        ================================== */}
-
         <div className="question-card">
-
           <p className="question-number">
-            Question {currentQuestion + 1}
+            Question{" "}
+            {currentQuestion + 1}
           </p>
 
           <h3>
             {question.question}
           </h3>
 
-          {/* OPTIONS */}
-
           <div className="options">
-
             {question.options.map(
               (option) => (
-
                 <button
                   type="button"
                   key={option}
                   className={`option ${
-                    selectedAnswer === option
+                    selectedAnswer ===
+                    option
                       ? "selected"
                       : ""
                   }`}
                   onClick={() =>
-                    setSelectedAnswer(option)
+                    setSelectedAnswer(
+                      option
+                    )
                   }
                   disabled={submitting}
                 >
-
                   <span className="option-circle">
-                    {selectedAnswer === option
+                    {selectedAnswer ===
+                    option
                       ? "✓"
                       : ""}
                   </span>
@@ -354,24 +343,21 @@ function SkillAssessment() {
                   <span>
                     {option}
                   </span>
-
                 </button>
-
               )
             )}
-
           </div>
 
-          {/* ACTIONS */}
-
           <div className="assessment-actions">
-
             <button
               type="button"
               className="previous-btn"
-              onClick={handlePrevious}
+              onClick={
+                handlePrevious
+              }
               disabled={
-                currentQuestion === 0 ||
+                currentQuestion ===
+                  0 ||
                 submitting
               }
             >
@@ -394,13 +380,9 @@ function SkillAssessment() {
                 ? "Submit Assessment"
                 : "Next Question →"}
             </button>
-
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 }

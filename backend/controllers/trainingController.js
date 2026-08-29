@@ -2,6 +2,23 @@ import TrainingMaterial from "../models/TrainingMaterial.js";
 import TrainingProgress from "../models/TrainingProgress.js";
 import Assessment from "../models/Assessment.js";
 
+// =====================================================
+// HELPER: DETERMINE TRAINING LEVEL FROM SCORE
+// =====================================================
+
+const getRecommendedLevel = (score) => {
+  const percentage = Number(score || 0);
+
+  if (percentage < 60) {
+    return "Beginner";
+  }
+
+  if (percentage < 80) {
+    return "Intermediate";
+  }
+
+  return null;
+};
 
 // =====================================================
 // GET ALL TRAINING MATERIALS
@@ -10,7 +27,11 @@ import Assessment from "../models/Assessment.js";
 
 export const getTrainingMaterials = async (req, res) => {
   try {
-    const { skill, level, competency } = req.query;
+    const {
+      skill,
+      level,
+      competency,
+    } = req.query;
 
     const filter = {
       isActive: true,
@@ -28,15 +49,17 @@ export const getTrainingMaterials = async (req, res) => {
       filter.competency = competency;
     }
 
-    const materials = await TrainingMaterial.find(filter)
-      .sort({ createdAt: -1 });
+    const materials =
+      await TrainingMaterial.find(filter)
+        .sort({
+          createdAt: -1,
+        });
 
     return res.status(200).json({
       success: true,
       count: materials.length,
       materials,
     });
-
   } catch (error) {
     console.error(
       "Get Training Materials Error:",
@@ -45,11 +68,11 @@ export const getTrainingMaterials = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch training materials.",
+      message:
+        "Failed to fetch training materials.",
     });
   }
 };
-
 
 // =====================================================
 // GET SINGLE TRAINING MATERIAL
@@ -70,7 +93,8 @@ export const getTrainingMaterialById = async (
     if (!material) {
       return res.status(404).json({
         success: false,
-        message: "Training material not found.",
+        message:
+          "Training material not found.",
       });
     }
 
@@ -78,7 +102,6 @@ export const getTrainingMaterialById = async (
       success: true,
       material,
     });
-
   } catch (error) {
     console.error(
       "Get Training Material Error:",
@@ -87,11 +110,11 @@ export const getTrainingMaterialById = async (
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch training material.",
+      message:
+        "Failed to fetch training material.",
     });
   }
 };
-
 
 // =====================================================
 // GET RECOMMENDED TRAINING
@@ -103,12 +126,11 @@ export const getRecommendedTraining = async (
   res
 ) => {
   try {
-
     const userId = req.user._id;
 
-    // -----------------------------------------------
-    // Find latest assessments
-    // -----------------------------------------------
+    // =================================================
+    // 1. GET USER'S ASSESSMENTS
+    // =================================================
 
     const assessments =
       await Assessment.find({
@@ -117,117 +139,156 @@ export const getRecommendedTraining = async (
         completedAt: -1,
       });
 
-    // -----------------------------------------------
-    // No assessment
-    // -----------------------------------------------
+    // =================================================
+    // 2. NO ASSESSMENT
+    // =================================================
 
     if (!assessments.length) {
-      const materials =
-        await TrainingMaterial.find({
-          isActive: true,
-        })
-          .sort({ createdAt: -1 })
-          .limit(10);
-
-        return res.status(200).json({
-          success: true,
-          message:
-            "Complete an assessment to receive personalized recommendations.",
-          personalized: false,
-          recommendations: materials,
-        });
+      return res.status(200).json({
+        success: true,
+        personalized: false,
+        message:
+          "Complete an assessment to receive personalized training recommendations.",
+        recommendations: [],
+      });
     }
 
-    // -----------------------------------------------
-    // Keep latest assessment for each skill
-    // -----------------------------------------------
+    // =================================================
+    // 3. GET LATEST ASSESSMENT FOR EACH SKILL
+    // =================================================
 
     const latestBySkill = {};
 
     for (const assessment of assessments) {
-
       if (!assessment.skill) {
         continue;
       }
 
-      if (
-        !latestBySkill[assessment.skill]
-      ) {
-        latestBySkill[
-          assessment.skill
-        ] = assessment;
+      const skillKey =
+        assessment.skill
+          .trim()
+          .toLowerCase();
+
+      if (!latestBySkill[skillKey]) {
+        latestBySkill[skillKey] =
+          assessment;
       }
     }
 
     const latestAssessments =
       Object.values(latestBySkill);
 
-    // -----------------------------------------------
-    // Find weak skills
-    // -----------------------------------------------
+    // =================================================
+    // 4. FIND SKILL GAPS
+    // =================================================
 
     const weakAssessments =
       latestAssessments.filter(
         (assessment) =>
-          Number(assessment.percentage) < 80
+          Number(
+            assessment.percentage
+          ) < 80
       );
 
-    // -----------------------------------------------
-    // If no gaps
-    // -----------------------------------------------
+    // =================================================
+    // 5. NO SKILL GAP
+    // =================================================
 
     if (!weakAssessments.length) {
       return res.status(200).json({
         success: true,
         personalized: true,
         message:
-          "No critical competency gaps found.",
+          "No significant competency gaps found.",
         recommendations: [],
       });
     }
 
-    // -----------------------------------------------
-    // Find training materials
-    // -----------------------------------------------
+    // =================================================
+    // 6. FIND MATCHING TRAINING
+    // =================================================
 
     const recommendations = [];
 
     for (const assessment of weakAssessments) {
+      const score = Number(
+        assessment.percentage || 0
+      );
+
+      const recommendedLevel =
+        getRecommendedLevel(score);
+
+      // Safety check
+      if (!recommendedLevel) {
+        continue;
+      }
+
+      // -----------------------------------------------
+      // Match BOTH skill and level
+      // -----------------------------------------------
 
       const materials =
         await TrainingMaterial.find({
           skill: assessment.skill,
+          level: recommendedLevel,
           isActive: true,
-        })
-          .sort({ createdAt: -1 })
-          .limit(5);
+        }).sort({
+          createdAt: -1,
+        });
+
+      // -----------------------------------------------
+      // Add recommendation information
+      // -----------------------------------------------
 
       materials.forEach((material) => {
-
         recommendations.push({
           ...material.toObject(),
 
-          recommendationReason:
-            `Your latest ${assessment.skill} assessment score is ${assessment.percentage}%. This training is recommended to strengthen your competency.`,
-
-          assessmentScore:
-            assessment.percentage,
+          assessmentScore: score,
 
           assessmentLevel:
             assessment.level,
-        });
 
+          recommendedLevel,
+
+          gap: Math.max(
+            0,
+            80 - score
+          ),
+
+          recommendationReason:
+            `Your ${assessment.skill} assessment score is ${score}%. We recommend ${recommendedLevel}-level training to help improve this competency.`,
+
+          isRecommended: true,
+        });
       });
     }
+
+    // =================================================
+    // 7. NO MATCHING MATERIAL
+    // =================================================
+
+    if (!recommendations.length) {
+      return res.status(200).json({
+        success: true,
+        personalized: true,
+        message:
+          "A skill gap was identified, but no matching training material is available yet.",
+        recommendations: [],
+      });
+    }
+
+    // =================================================
+    // 8. RETURN RECOMMENDATIONS
+    // =================================================
 
     return res.status(200).json({
       success: true,
       personalized: true,
+      count: recommendations.length,
       recommendations,
     });
-
   } catch (error) {
-
     console.error(
       "Get Recommended Training Error:",
       error
@@ -241,7 +302,6 @@ export const getRecommendedTraining = async (
   }
 };
 
-
 // =====================================================
 // START TRAINING
 // POST /api/v1/training/:id/start
@@ -252,13 +312,12 @@ export const startTraining = async (
   res
 ) => {
   try {
-
     const userId = req.user._id;
     const trainingId = req.params.id;
 
-    // -----------------------------------------------
-    // Check material
-    // -----------------------------------------------
+    // =================================================
+    // CHECK MATERIAL
+    // =================================================
 
     const material =
       await TrainingMaterial.findOne({
@@ -269,13 +328,14 @@ export const startTraining = async (
     if (!material) {
       return res.status(404).json({
         success: false,
-        message: "Training material not found.",
+        message:
+          "Training material not found.",
       });
     }
 
-    // -----------------------------------------------
-    // Check existing progress
-    // -----------------------------------------------
+    // =================================================
+    // CHECK EXISTING PROGRESS
+    // =================================================
 
     let progress =
       await TrainingProgress.findOne({
@@ -283,37 +343,26 @@ export const startTraining = async (
         trainingMaterial: trainingId,
       });
 
-    // -----------------------------------------------
-    // Create progress
-    // -----------------------------------------------
+    // =================================================
+    // CREATE PROGRESS
+    // =================================================
 
     if (!progress) {
-
       progress =
         await TrainingProgress.create({
-
           user: userId,
-
-          trainingMaterial:
-            trainingId,
-
+          trainingMaterial: trainingId,
           progress: 0,
-
           status: "in-progress",
-
           startedAt: new Date(),
-
           recommended: true,
-
         });
-
     } else {
-
+      // Do not restart completed training
       if (
         progress.status !==
         "completed"
       ) {
-
         progress.status =
           "in-progress";
 
@@ -327,18 +376,12 @@ export const startTraining = async (
     }
 
     return res.status(200).json({
-
       success: true,
-
       message:
         "Training started successfully.",
-
       progress,
-
     });
-
   } catch (error) {
-
     console.error(
       "Start Training Error:",
       error
@@ -346,11 +389,11 @@ export const startTraining = async (
 
     return res.status(500).json({
       success: false,
-      message: "Failed to start training.",
+      message:
+        "Failed to start training.",
     });
   }
 };
-
 
 // =====================================================
 // UPDATE TRAINING PROGRESS
@@ -362,7 +405,6 @@ export const updateTrainingProgress = async (
   res
 ) => {
   try {
-
     const userId = req.user._id;
     const trainingId = req.params.id;
 
@@ -370,9 +412,9 @@ export const updateTrainingProgress = async (
       progress: progressValue,
     } = req.body;
 
-    // -----------------------------------------------
-    // Validate
-    // -----------------------------------------------
+    // =================================================
+    // VALIDATE
+    // =================================================
 
     if (
       progressValue === undefined ||
@@ -389,7 +431,9 @@ export const updateTrainingProgress = async (
       Number(progressValue);
 
     if (
-      Number.isNaN(numericProgress) ||
+      Number.isNaN(
+        numericProgress
+      ) ||
       numericProgress < 0 ||
       numericProgress > 100
     ) {
@@ -400,9 +444,9 @@ export const updateTrainingProgress = async (
       });
     }
 
-    // -----------------------------------------------
-    // Find progress
-    // -----------------------------------------------
+    // =================================================
+    // FIND PROGRESS
+    // =================================================
 
     const trainingProgress =
       await TrainingProgress.findOne({
@@ -418,15 +462,14 @@ export const updateTrainingProgress = async (
       });
     }
 
-    // -----------------------------------------------
-    // Update
-    // -----------------------------------------------
+    // =================================================
+    // UPDATE
+    // =================================================
 
     trainingProgress.progress =
       numericProgress;
 
     if (numericProgress >= 100) {
-
       trainingProgress.progress = 100;
 
       trainingProgress.status =
@@ -435,9 +478,7 @@ export const updateTrainingProgress = async (
       trainingProgress.completedAt =
         trainingProgress.completedAt ||
         new Date();
-
     } else {
-
       trainingProgress.status =
         "in-progress";
     }
@@ -445,19 +486,12 @@ export const updateTrainingProgress = async (
     await trainingProgress.save();
 
     return res.status(200).json({
-
       success: true,
-
       message:
         "Training progress updated.",
-
-      progress:
-        trainingProgress,
-
+      progress: trainingProgress,
     });
-
   } catch (error) {
-
     console.error(
       "Update Training Progress Error:",
       error
@@ -471,7 +505,6 @@ export const updateTrainingProgress = async (
   }
 };
 
-
 // =====================================================
 // COMPLETE TRAINING
 // PUT /api/v1/training/:id/complete
@@ -482,7 +515,6 @@ export const completeTraining = async (
   res
 ) => {
   try {
-
     const userId = req.user._id;
     const trainingId = req.params.id;
 
@@ -511,19 +543,12 @@ export const completeTraining = async (
     await trainingProgress.save();
 
     return res.status(200).json({
-
       success: true,
-
       message:
         "Training completed successfully.",
-
-      progress:
-        trainingProgress,
-
+      progress: trainingProgress,
     });
-
   } catch (error) {
-
     console.error(
       "Complete Training Error:",
       error
@@ -537,7 +562,6 @@ export const completeTraining = async (
   }
 };
 
-
 // =====================================================
 // GET MY TRAINING PROGRESS
 // GET /api/v1/training/progress/my
@@ -548,7 +572,6 @@ export const getMyTrainingProgress = async (
   res
 ) => {
   try {
-
     const progress =
       await TrainingProgress.find({
         user: req.user._id,
@@ -561,17 +584,11 @@ export const getMyTrainingProgress = async (
         });
 
     return res.status(200).json({
-
       success: true,
-
       count: progress.length,
-
       progress,
-
     });
-
   } catch (error) {
-
     console.error(
       "Get Training Progress Error:",
       error

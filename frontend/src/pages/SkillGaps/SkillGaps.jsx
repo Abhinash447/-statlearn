@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./SkillGaps.css";
 
-const API_URL = "http://localhost:5000/api/v1";
+const API_URL =
+  "http://localhost:5000/api/v1";
 
 export default function SkillGaps() {
   const navigate = useNavigate();
 
   const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] =
+    useState(true);
+  const [error, setError] =
+    useState("");
 
   const loadSkillGaps = async () => {
     try {
@@ -24,35 +27,40 @@ export default function SkillGaps() {
         }
       );
 
-      const result = await response.json();
+      const data =
+        await response.json();
 
-      console.log("Skill Gap API Response:", result);
+      console.log(
+        "Skill Gap Response:",
+        data
+      );
+
+      if (response.status === 401) {
+        navigate("/login", {
+          replace: true,
+        });
+        return;
+      }
 
       if (!response.ok) {
-        if (response.status === 401) {
-          setError(
-            "You are not authenticated. Please login again."
-          );
-          return;
-        }
-
         throw new Error(
-          result.message ||
+          data.message ||
             "Failed to load skill gaps."
         );
       }
 
       setSkills(
-        Array.isArray(result.fullGapAnalysis)
-          ? result.fullGapAnalysis
-          : []
+        data.skills || []
       );
     } catch (error) {
-      console.error("Skill Gap Error:", error);
+      console.error(
+        "Skill Gap Error:",
+        error
+      );
 
       setError(
         error.message ||
-          "Unable to load skill gap data."
+          "Unable to load skill gaps."
       );
     } finally {
       setLoading(false);
@@ -61,136 +69,17 @@ export default function SkillGaps() {
 
   useEffect(() => {
     loadSkillGaps();
-
-    const handleDataChange = () => {
-      loadSkillGaps();
-    };
-
-    window.addEventListener(
-      "statlearn:data-changed",
-      handleDataChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "statlearn:data-changed",
-        handleDataChange
-      );
-    };
   }, []);
 
   const gaps = skills
     .filter(
       (item) =>
-        Number(item.currentScore || 0) <
-        Number(item.targetScore || 0)
+        item.score < item.target
     )
     .sort(
       (a, b) =>
-        Number(a.currentScore || 0) -
-        Number(b.currentScore || 0)
+        a.score - b.score
     );
-
-  const getGapLevel = (item) => {
-    const score = Number(
-      item.currentScore || 0
-    );
-
-    if (item.isCritical || score < 50) {
-      return "High";
-    }
-
-    if (score < 70) {
-      return "Medium";
-    }
-
-    return "Low";
-  };
-
-  const getTrainingLevel = (item) => {
-    const score = Number(
-      item.currentScore || 0
-    );
-
-    if (score < 60) {
-      return "Beginner";
-    }
-
-    if (score < 80) {
-      return "Intermediate";
-    }
-
-    return "Advanced";
-  };
-
-  if (loading) {
-    return (
-      <div className="gap-page">
-        <div className="gap-shell">
-          <button
-            className="back-button"
-            onClick={() =>
-              navigate("/student-dashboard")
-            }
-          >
-            ← Dashboard
-          </button>
-
-          <div className="no-gaps">
-            <h2>
-              Analyzing your competency...
-            </h2>
-
-            <p>
-              Loading your latest assessment
-              results.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="gap-page">
-        <div className="gap-shell">
-          <button
-            className="back-button"
-            onClick={() =>
-              navigate("/student-dashboard")
-            }
-          >
-            ← Dashboard
-          </button>
-
-          <div className="no-gaps">
-            <h2>
-              Unable to load skill gaps
-            </h2>
-
-            <p>{error}</p>
-
-            <button
-              className="primary"
-              onClick={loadSkillGaps}
-            >
-              Try Again
-            </button>
-
-            <button
-              className="primary"
-              onClick={() =>
-                navigate("/skill-selection")
-              }
-            >
-              Take Skill Assessment
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="gap-page">
@@ -198,7 +87,9 @@ export default function SkillGaps() {
         <button
           className="back-button"
           onClick={() =>
-            navigate("/student-dashboard")
+            navigate(
+              "/student-dashboard"
+            )
           }
         >
           ← Dashboard
@@ -215,15 +106,18 @@ export default function SkillGaps() {
             </h1>
 
             <p>
-              Your competency gaps are calculated
-              from your latest assessment results.
+              Your competency gaps are
+              calculated from your latest
+              assessment results.
             </p>
           </div>
 
           <button
             className="primary"
             onClick={() =>
-              navigate("/skill-selection")
+              navigate(
+                "/skill-selection"
+              )
             }
           >
             {skills.length
@@ -232,29 +126,68 @@ export default function SkillGaps() {
           </button>
         </div>
 
-        {skills.length === 0 && (
+        {loading && (
           <div className="no-gaps">
             <h2>
-              No skill gaps identified yet
+              Analyzing your competency...
             </h2>
 
             <p>
-              Complete a skill assessment to
-              identify your competency gaps.
+              Loading your assessment
+              results.
             </p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="no-gaps">
+            <h2>
+              Unable to load skill gaps
+            </h2>
+
+            <p>{error}</p>
 
             <button
               className="primary"
-              onClick={() =>
-                navigate("/skill-selection")
+              onClick={
+                loadSkillGaps
               }
             >
-              Take Skill Assessment →
+              Try Again
             </button>
           </div>
         )}
 
-        {skills.length > 0 &&
+        {!loading &&
+          !error &&
+          skills.length === 0 && (
+            <div className="no-gaps">
+              <h2>
+                No skill gaps identified yet
+              </h2>
+
+              <p>
+                Complete a skill assessment
+                to identify your competency
+                gaps.
+              </p>
+
+              <button
+                className="primary"
+                onClick={() =>
+                  navigate(
+                    "/skill-selection"
+                  )
+                }
+              >
+                Take Skill Assessment →
+              </button>
+            </div>
+          )}
+
+        {!loading &&
+          !error &&
+          skills.length > 0 &&
           gaps.length === 0 && (
             <div className="no-gaps">
               <h2>
@@ -262,113 +195,110 @@ export default function SkillGaps() {
               </h2>
 
               <p>
-                Your assessed competencies are
-                currently at or above their target
-                benchmarks.
+                Your assessed skills are
+                currently at or above the
+                80% target.
               </p>
             </div>
           )}
 
-        {gaps.length > 0 && (
-          <div className="gap-grid">
-            {gaps.map((item) => {
-              const score = Number(
-                item.currentScore || 0
-              );
+        {!loading &&
+          !error &&
+          gaps.length > 0 && (
+            <div className="gap-grid">
+              {gaps.map((item) => {
+                const severity =
+                  item.score < 60
+                    ? "high"
+                    : item.score < 70
+                    ? "medium"
+                    : "low";
 
-              const target = Number(
-                item.targetScore || 0
-              );
+                return (
+                  <div
+                    className="gap-card"
+                    key={
+                      item.assessmentId
+                    }
+                  >
+                    <div className="gap-title">
+                      <div>
+                        <h2>
+                          {item.skill}
+                        </h2>
 
-              const gap = Number(
-                item.gapScore ||
-                  Math.max(
-                    0,
-                    target - score
-                  )
-              );
+                        <p>
+                          Current competency:{" "}
+                          {item.score}%
+                          {" • "}
+                          Target:{" "}
+                          {item.target}%
+                        </p>
+                      </div>
 
-              const level =
-                getGapLevel(item);
+                      <span
+                        className={severity}
+                      >
+                        {severity ===
+                        "high"
+                          ? "High"
+                          : severity ===
+                            "medium"
+                          ? "Medium"
+                          : "Low"}
+                      </span>
+                    </div>
 
-              return (
-                <div
-                  className="gap-card"
-                  key={
-                    item.competencyName
-                  }
-                >
-                  <div className="gap-title">
-                    <div>
-                      <h2>
-                        {
-                          item.competencyName
+                    <div className="gap-bar">
+                      <span
+                        style={{
+                          width: `${Math.min(
+                            item.score,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="gap-foot">
+                      <div>
+                        <strong>
+                          {item.score}%
+                        </strong>
+
+                        <small>
+                          Gap:{" "}
+                          {item.gap}%
+                        </small>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          navigate(
+                            "/training",
+                            {
+                              state: {
+                                skill:
+                                  item.skill,
+                                level:
+                                  item.level,
+                                percentage:
+                                  item.score,
+                                gap:
+                                  item.gap,
+                              },
+                            }
+                          )
                         }
-                      </h2>
-
-                      <p>
-                        Current competency:{" "}
-                        {score}% • Target:{" "}
-                        {target}%
-                      </p>
+                      >
+                        Get Training →
+                      </button>
                     </div>
-
-                    <span
-                      className={level.toLowerCase()}
-                    >
-                      {level}
-                    </span>
                   </div>
-
-                  <div className="gap-bar">
-                    <span
-                      style={{
-                        width: `${Math.min(
-                          score,
-                          100
-                        )}%`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="gap-foot">
-                    <div>
-                      <strong>
-                        {score}%
-                      </strong>
-
-                      <small>
-                        Gap: {gap}%
-                      </small>
-                    </div>
-
-                    <button
-                      onClick={() =>
-                        navigate(
-                          "/training",
-                          {
-                            state: {
-                              skill:
-                                item.competencyName,
-                              level:
-                                getTrainingLevel(
-                                  item
-                                ),
-                              percentage:
-                                score,
-                            },
-                          }
-                        )
-                      }
-                    >
-                      Get Training →
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
       </div>
     </div>
   );

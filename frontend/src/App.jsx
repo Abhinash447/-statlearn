@@ -13,10 +13,12 @@ import SkillSelection from "./pages/SkillSelection/SkillSelection";
 import SkillAssessment from "./pages/SkillAssessment/SkillAssessment";
 import Assessment from "./pages/Assessment/Assessment";
 import AssessmentResult from "./pages/AssessmentResult/AssessmentResult";
-import SkillGaps from "./pages/SkillGaps/SkillGaps";
 import Quiz from "./pages/Quiz/Quiz";
 import Training from "./pages/Training/Training";
+import TrainingModule from "./pages/TrainingModule/TrainingModule";
 import Progress from "./pages/Progress/Progress";
+import SkillGaps from "./pages/SkillGaps/SkillGaps";
+
 
 import FacultyDashboard from "./pages/FacultyDashboard/FacultyDashboard";
 
@@ -87,6 +89,11 @@ function App() {
         <Route
           path="/training"
           element={<Training />}
+        />
+
+        <Route
+          path="/training/module"
+          element={<TrainingModule />}
         />
 
         <Route

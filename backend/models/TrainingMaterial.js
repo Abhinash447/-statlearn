@@ -1,5 +1,45 @@
 import mongoose from "mongoose";
 
+const lessonSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    content: {
+      type: String,
+      required: true,
+    },
+
+    example: {
+      type: String,
+      default: "",
+    },
+
+    keyPoints: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+
+    practice: {
+      type: String,
+      default: "",
+    },
+
+    order: {
+      type: Number,
+      required: true,
+    },
+  },
+  {
+    _id: true,
+  }
+);
+
 const trainingMaterialSchema = new mongoose.Schema(
   {
     title: {
@@ -38,7 +78,12 @@ const trainingMaterialSchema = new mongoose.Schema(
 
     content: {
       type: String,
-      required: true,
+      default: "",
+    },
+
+    lessons: {
+      type: [lessonSchema],
+      default: [],
     },
 
     duration: {
@@ -59,6 +104,7 @@ const trainingMaterialSchema = new mongoose.Schema(
       ],
       default: "course",
     },
+
     source: {
       type: String,
       default: "StatLearn AI",

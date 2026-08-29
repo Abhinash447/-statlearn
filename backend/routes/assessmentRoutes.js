@@ -1,11 +1,9 @@
 import express from "express";
-
 import {
   createAssessment,
   getMyAssessments,
   getAssessmentById,
 } from "../controllers/assessmentController.js";
-
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();

@@ -3,16 +3,15 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-
 import "./AssessmentResult.css";
 
-const API_URL = "http://localhost:5000/api/v1";
+const API_URL =
+  "http://localhost:5000/api/v1";
 
 export default function AssessmentResult() {
-
   const navigate = useNavigate();
-
-  const { assessmentId } = useParams();
+  const { assessmentId } =
+    useParams();
 
   const [result, setResult] =
     useState(null);
@@ -23,81 +22,78 @@ export default function AssessmentResult() {
   const [error, setError] =
     useState("");
 
-  // ==========================================
-  // FETCH RESULT
-  // ==========================================
-
   useEffect(() => {
+    const fetchResult = async () => {
+      if (!assessmentId) {
+        setError(
+          "Assessment ID is missing."
+        );
+        setLoading(false);
+        return;
+      }
 
-    const fetchAssessmentResult =
-      async () => {
-
-        try {
-
-          const response =
-            await fetch(
-              `${API_URL}/assessments/${assessmentId}`,
-              {
-                method: "GET",
-                credentials: "include",
-              }
-            );
-
-          const data =
-            await response.json();
-
-          console.log(
-            "Assessment Result:",
-            data
+      try {
+        const response =
+          await fetch(
+            `${API_URL}/assessments/${assessmentId}`,
+            {
+              method: "GET",
+              credentials: "include",
+            }
           );
 
-          if (!response.ok) {
-            throw new Error(
-              data.message ||
-                "Failed to fetch assessment result."
-            );
-          }
+        const data =
+          await response.json();
 
-          setResult(
-            data.assessment
-          );
+        console.log(
+          "Assessment Result:",
+          data
+        );
 
-        } catch (error) {
-
-          console.error(
-            "Assessment Result Error:",
-            error
-          );
-
-          setError(
-            error.message ||
-              "Unable to load assessment result."
-          );
-
-        } finally {
-
-          setLoading(false);
-
+        if (
+          response.status === 401
+        ) {
+          navigate("/login", {
+            replace: true,
+          });
+          return;
         }
-      };
 
-    if (assessmentId) {
-      fetchAssessmentResult();
-    }
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              "Failed to fetch assessment result."
+          );
+        }
 
-  }, [assessmentId]);
+        setResult(
+          data.assessment
+        );
+      } catch (error) {
+        console.error(
+          "Assessment Result Error:",
+          error
+        );
 
-  // ==========================================
-  // LOADING
-  // ==========================================
+        setError(
+          error.message ||
+            "Unable to load assessment result."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResult();
+  }, [
+    assessmentId,
+    navigate,
+  ]);
 
   if (loading) {
-
     return (
       <div className="result-page">
-
         <div className="result-card">
-
           <h2>
             Loading Result...
           </h2>
@@ -105,78 +101,56 @@ export default function AssessmentResult() {
           <p>
             Fetching your assessment result.
           </p>
-
         </div>
-
       </div>
     );
   }
 
-  // ==========================================
-  // ERROR
-  // ==========================================
-
   if (error) {
-
     return (
       <div className="result-page">
-
         <div className="result-card">
-
           <h2>
             Unable to Load Result
           </h2>
 
-          <p>
-            {error}
-          </p>
+          <p>{error}</p>
 
           <button
             onClick={() =>
-              navigate("/skill-selection")
+              navigate(
+                "/skill-selection"
+              )
             }
           >
             Take Assessment
           </button>
-
         </div>
-
       </div>
     );
   }
 
-  // ==========================================
-  // NO RESULT
-  // ==========================================
-
   if (!result) {
-
     return (
       <div className="result-page">
-
         <div className="result-card">
-
           <h2>
             No Result Found
           </h2>
 
           <button
             onClick={() =>
-              navigate("/skill-selection")
+              navigate(
+                "/skill-selection"
+              )
             }
           >
             Take Assessment
           </button>
-
         </div>
-
       </div>
     );
   }
-
-  // ==========================================
-  // RESULT DATA
-  // ==========================================
 
   const {
     skill,
@@ -186,23 +160,12 @@ export default function AssessmentResult() {
     percentage = 0,
   } = result;
 
-  // ==========================================
-  // COMPETENCY STATUS
-  // ==========================================
-
-  let status;
-
-  if (percentage >= 80) {
-    status = "Strong";
-  } else if (percentage >= 50) {
-    status = "Needs Improvement";
-  } else {
-    status = "Critical Gap";
-  }
-
-  // ==========================================
-  // MESSAGE
-  // ==========================================
+  const status =
+    percentage >= 80
+      ? "Strong"
+      : percentage >= 50
+      ? "Needs Improvement"
+      : "Critical Gap";
 
   const message =
     percentage >= 80
@@ -211,15 +174,9 @@ export default function AssessmentResult() {
       ? "Good progress. Targeted training can strengthen your competency."
       : "A competency gap was identified. Personalized training is recommended.";
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <div className="result-page">
-
       <div className="result-card">
-
         <p className="result-label">
           ASSESSMENT COMPLETE
         </p>
@@ -232,21 +189,16 @@ export default function AssessmentResult() {
           {level} Level
         </p>
 
-        {/* SCORE */}
-
         <div className="score-circle">
-
           <strong>
             {percentage}%
           </strong>
 
           <span>
-            {score} / {totalQuestions}
+            {score} /{" "}
+            {totalQuestions}
           </span>
-
         </div>
-
-        {/* MESSAGE */}
 
         <h2>
           {percentage >= 60
@@ -254,14 +206,9 @@ export default function AssessmentResult() {
             : "Keep Learning!"}
         </h2>
 
-        <p>
-          {message}
-        </p>
-
-        {/* STATUS */}
+        <p>{message}</p>
 
         <div className="competency-status">
-
           <span>
             Competency Status
           </span>
@@ -269,51 +216,49 @@ export default function AssessmentResult() {
           <strong>
             {status}
           </strong>
-
         </div>
-
-        {/* SKILL GAP */}
 
         <button
           className="training-btn"
           onClick={() =>
-            navigate("/skill-gaps")
+            navigate(
+              "/skill-gaps"
+            )
           }
         >
           View Skill Gaps →
         </button>
 
-        {/* TRAINING */}
-
         <button
           className="training-btn"
           onClick={() =>
-            navigate("/training", {
-              state: {
-                skill,
-                level,
-                percentage,
-                status,
-              },
-            })
+            navigate(
+              "/training",
+              {
+                state: {
+                  skill,
+                  level,
+                  percentage,
+                  status,
+                },
+              }
+            )
           }
         >
           View Personalized Training →
         </button>
 
-        {/* DASHBOARD */}
-
         <button
           className="dashboard-btn"
           onClick={() =>
-            navigate("/student-dashboard")
+            navigate(
+              "/student-dashboard"
+            )
           }
         >
           Dashboard
         </button>
-
       </div>
-
     </div>
   );
 }

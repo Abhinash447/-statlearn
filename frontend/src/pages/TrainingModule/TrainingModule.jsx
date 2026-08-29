@@ -14,8 +14,8 @@ export default function TrainingModule() {
 
   const [training, setTraining] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [currentLesson, setCurrentLesson] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,7 +49,9 @@ export default function TrainingModule() {
           );
         }
 
-        setTraining(data.material);
+        const material = data.material;
+
+        setTraining(material);
 
         const startResponse = await fetch(
           `${API_URL}/training/${trainingId}/start`,
@@ -72,16 +74,41 @@ export default function TrainingModule() {
           );
         }
 
-        setProgress(
-          startData.progress?.progress || 0
-        );
+        const savedProgress =
+          Number(
+            startData.progress?.progress || 0
+          );
+
+        setProgress(savedProgress);
+
+        const totalLessons =
+          material.lessons?.length || 0;
+
+        if (totalLessons > 0) {
+          const savedLesson = Math.min(
+            Math.floor(
+              (savedProgress / 100) *
+                totalLessons
+            ),
+            totalLessons - 1
+          );
+
+          setCurrentLesson(
+            savedProgress >= 100
+              ? totalLessons - 1
+              : savedLesson
+          );
+        }
       } catch (err) {
         console.error(
           "Training module error:",
           err
         );
 
-        setError(err.message);
+        setError(
+          err.message ||
+            "Unable to load training."
+        );
       } finally {
         setLoading(false);
       }
@@ -115,8 +142,15 @@ export default function TrainingModule() {
         );
       }
 
-      setProgress(
-        data.progress?.progress ?? value
+      const updatedProgress =
+        Number(
+          data.progress?.progress ?? value
+        );
+
+      setProgress(updatedProgress);
+
+      window.dispatchEvent(
+        new Event("statlearn:data-changed")
       );
 
       return true;
@@ -126,14 +160,77 @@ export default function TrainingModule() {
         err
       );
 
-      alert(err.message);
+      setError(
+        err.message ||
+          "Failed to update progress."
+      );
+
       return false;
     }
   };
 
+  const handleNext = async () => {
+    if (
+      !training?.lessons?.length ||
+      completing
+    ) {
+      return;
+    }
+
+    const totalLessons =
+      training.lessons.length;
+
+    const nextLesson =
+      currentLesson + 1;
+
+    if (nextLesson >= totalLessons) {
+      await handleComplete();
+      return;
+    }
+
+    const calculatedProgress =
+      Math.round(
+        ((nextLesson + 1) /
+          totalLessons) *
+          100
+      );
+
+    const success =
+      await updateProgress(
+        Math.min(
+          calculatedProgress,
+          99
+        )
+      );
+
+    if (success) {
+      setCurrentLesson(
+        nextLesson
+      );
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentLesson === 0) {
+      return;
+    }
+
+    const previousLesson =
+      currentLesson - 1;
+
+    setCurrentLesson(
+      previousLesson
+    );
+  };
+
   const handleComplete = async () => {
+    if (completing) {
+      return;
+    }
+
     try {
       setCompleting(true);
+      setError("");
 
       const response = await fetch(
         `${API_URL}/training/${trainingId}/complete`,
@@ -157,6 +254,10 @@ export default function TrainingModule() {
 
       setProgress(100);
 
+      window.dispatchEvent(
+        new Event("statlearn:data-changed")
+      );
+
       navigate("/training", {
         replace: true,
       });
@@ -166,19 +267,12 @@ export default function TrainingModule() {
         err
       );
 
-      alert(err.message);
+      setError(
+        err.message ||
+          "Failed to complete training."
+      );
     } finally {
       setCompleting(false);
-    }
-  };
-
-  const handleStartLearning = async () => {
-    const success = await updateProgress(
-      Math.max(progress, 25)
-    );
-
-    if (!success) {
-      return;
     }
   };
 
@@ -196,7 +290,7 @@ export default function TrainingModule() {
     );
   }
 
-  if (error) {
+  if (error && !training) {
     return (
       <div className="training-module-page">
         <div className="training-module-shell">
@@ -225,6 +319,28 @@ export default function TrainingModule() {
     return null;
   }
 
+  const lessons =
+    training.lessons || [];
+
+  const totalLessons =
+    lessons.length;
+
+  const lesson =
+    lessons[currentLesson];
+
+  const isLastLesson =
+    currentLesson ===
+    totalLessons - 1;
+
+  const lessonProgress =
+    totalLessons > 0
+      ? Math.round(
+          ((currentLesson + 1) /
+            totalLessons) *
+            100
+        )
+      : 0;
+
   return (
     <div className="training-module-page">
       <div className="training-module-shell">
@@ -238,9 +354,9 @@ export default function TrainingModule() {
         </button>
 
         <section className="module-header">
-          <div>
+          <div className="module-header-content">
             <p className="module-eyebrow">
-              TRAINING MODULE
+              PERSONALIZED TRAINING
             </p>
 
             <h1>
@@ -258,7 +374,7 @@ export default function TrainingModule() {
             </strong>
 
             <span>
-              Progress
+              Overall Progress
             </span>
           </div>
         </section>
@@ -281,89 +397,183 @@ export default function TrainingModule() {
           </span>
         </div>
 
-        <div className="progress-container">
-          <div className="progress-label">
-            <span>
-              Training Progress
-            </span>
-
-            <strong>
-              {progress}%
-            </strong>
-          </div>
-
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${progress}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        <main className="lesson-card">
-          <h2>
-            {training.title}
-          </h2>
-
-          <div className="lesson-content">
-            {training.content}
-          </div>
-
-          {training.url && (
-            <a
-              href={training.url}
-              target="_blank"
-              rel="noreferrer"
-              className="resource-link"
-            >
-              Open External Resource →
-            </a>
-          )}
-
-          <div className="lesson-actions">
-            {progress < 100 && (
-              <button
-                className="secondary-btn"
-                onClick={handleStartLearning}
-                disabled={progress >= 25}
+        {totalLessons > 0 ? (
+          <>
+            <div className="progress-container">
+              <div
+                className="progress-label"
+                style={{
+                  display: "flex",
+                  justifyContent:
+                    "space-between",
+                  alignItems: "center",
+                  gap: "20px",
+                  width: "100%",
+                  marginBottom: "10px",
+                  boxSizing: "border-box",
+                }}
               >
-                {progress >= 25
-                  ? "Learning Started"
-                  : "Start Learning"}
-              </button>
+                <span>
+                  Lesson{" "}
+                  {currentLesson + 1}{" "}
+                  of {totalLessons}
+                </span>
+
+                <strong>
+                  {lessonProgress}%
+                </strong>
+              </div>
+
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${lessonProgress}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="training-error">
+                {error}
+              </div>
             )}
+
+            <main className="lesson-card">
+              <p className="lesson-number">
+                Lesson {currentLesson + 1}
+              </p>
+
+              <h2>
+                {lesson.title}
+              </h2>
+
+              {lesson.content && (
+                <div className="lesson-section">
+                  <h3>
+                    Explanation
+                  </h3>
+
+                  <div className="lesson-content">
+                    {lesson.content}
+                  </div>
+                </div>
+              )}
+
+              {lesson.example && (
+                <div className="lesson-section">
+                  <h3>
+                    Example
+                  </h3>
+
+                  <div className="lesson-example">
+                    <pre>
+                      {lesson.example}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {lesson.keyPoints?.length >
+                0 && (
+                <div className="lesson-section">
+                  <h3>
+                    Key Points
+                  </h3>
+
+                  <ul>
+                    {lesson.keyPoints.map(
+                      (
+                        point,
+                        index
+                      ) => (
+                        <li
+                          key={index}
+                        >
+                          {point}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {lesson.practice && (
+                <div className="lesson-section">
+                  <h3>
+                    Practice
+                  </h3>
+
+                  <div className="lesson-practice">
+                    {lesson.practice}
+                  </div>
+                </div>
+              )}
+
+              <div className="lesson-actions">
+                <button
+                  className="secondary-btn"
+                  onClick={
+                    handlePrevious
+                  }
+                  disabled={
+                    currentLesson ===
+                      0 ||
+                    completing
+                  }
+                >
+                  ← Previous
+                </button>
+
+                <button
+                  className="primary-btn"
+                  onClick={
+                    handleNext
+                  }
+                  disabled={
+                    completing
+                  }
+                >
+                  {completing
+                    ? "Completing..."
+                    : isLastLesson
+                    ? "Complete Training ✓"
+                    : "Next Lesson →"}
+                </button>
+              </div>
+
+              {isLastLesson && (
+                <p className="training-note">
+                  You have reached the
+                  final lesson. Complete
+                  the training to save
+                  100% progress.
+                </p>
+              )}
+            </main>
+          </>
+        ) : (
+          <main className="lesson-card">
+            <h2>
+              Training Content Coming Soon
+            </h2>
+
+            <p>
+              This training material does
+              not contain lessons yet.
+            </p>
 
             <button
               className="primary-btn"
-              onClick={handleComplete}
-              disabled={
-                completing ||
-                progress < 25
+              onClick={() =>
+                navigate("/training")
               }
             >
-              {completing
-                ? "Completing..."
-                : progress >= 100
-                ? "Completed ✓"
-                : "Complete Training ✓"}
+              ← Back to Training
             </button>
-          </div>
-
-          {progress < 25 && (
-            <p className="training-note">
-              Start learning before completing
-              the training module.
-            </p>
-          )}
-
-          {progress >= 100 && (
-            <p className="training-success">
-              Training completed successfully.
-            </p>
-          )}
-        </main>
+          </main>
+        )}
       </div>
     </div>
   );

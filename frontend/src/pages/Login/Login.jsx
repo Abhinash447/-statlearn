@@ -101,7 +101,7 @@ function Login() {
       // LOGIN SUCCESS
       // ----------------------------------------
 
-      setSuccess("Account created successfully!");
+      setSuccess("Login successfully!");
 
       switch (data.user.role) {
         case "admin":

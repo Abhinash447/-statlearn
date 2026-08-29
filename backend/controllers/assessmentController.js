@@ -6,15 +6,21 @@ export const createAssessment = async (req, res) => {
     const {
       skill,
       level,
-      type,
+      type = "initial",
       score,
       totalQuestions,
       percentage,
     } = req.body;
 
-    if (!skill || !level) {
+    if (
+      !skill ||
+      !level ||
+      score === undefined ||
+      !totalQuestions ||
+      percentage === undefined
+    ) {
       return res.status(400).json({
-        message: "Skill and level are required.",
+        message: "Required assessment data is missing.",
       });
     }
 
@@ -22,7 +28,7 @@ export const createAssessment = async (req, res) => {
       user: req.user._id,
       skill,
       level,
-      type: type || "initial",
+      type,
       score,
       totalQuestions,
       percentage,
@@ -46,11 +52,12 @@ export const createAssessment = async (req, res) => {
       });
     }
 
-    const competency = user.competencyProfile.find(
-      (item) =>
-        item.competencyName.toLowerCase() ===
-        skill.toLowerCase()
-    );
+    const competency =
+      user.competencyProfile.find(
+        (item) =>
+          item.competencyName.toLowerCase() ===
+          skill.toLowerCase()
+      );
 
     if (competency) {
       competency.score = percentage;
@@ -68,6 +75,7 @@ export const createAssessment = async (req, res) => {
     await user.save();
 
     return res.status(201).json({
+      success: true,
       message: "Assessment saved successfully.",
       assessment,
       competency: {
@@ -76,61 +84,76 @@ export const createAssessment = async (req, res) => {
         status,
       },
     });
-
   } catch (error) {
-    console.error("Create Assessment Error:", error);
+    console.error(
+      "Create Assessment Error:",
+      error
+    );
 
     return res.status(500).json({
+      success: false,
       message: "Failed to save assessment.",
       error: error.message,
     });
   }
 };
 
-
 export const getMyAssessments = async (req, res) => {
   try {
-    const assessments = await Assessment.find({
-      user: req.user._id,
-    }).sort({
-      completedAt: -1,
-    });
+    const assessments =
+      await Assessment.find({
+        user: req.user._id,
+      }).sort({
+        completedAt: -1,
+      });
 
     return res.status(200).json({
+      success: true,
       assessments,
     });
-
   } catch (error) {
-    console.error("Get Assessments Error:", error);
+    console.error(
+      "Get Assessments Error:",
+      error
+    );
 
     return res.status(500).json({
+      success: false,
       message: "Failed to fetch assessments.",
     });
   }
 };
 
-
-export const getAssessmentById = async (req, res) => {
+export const getAssessmentById = async (
+  req,
+  res
+) => {
   try {
-    const assessment = await Assessment.findOne({
-      _id: req.params.id,
-      user: req.user._id,
-    });
+    const assessment =
+      await Assessment.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+      });
 
     if (!assessment) {
       return res.status(404).json({
+        success: false,
         message: "Assessment not found.",
       });
     }
 
     return res.status(200).json({
+      success: true,
       assessment,
     });
-
   } catch (error) {
-    console.error("Get Assessment Error:", error);
+    console.error(
+      "Get Assessment Error:",
+      error
+    );
 
     return res.status(500).json({
+      success: false,
       message: "Failed to fetch assessment.",
     });
   }

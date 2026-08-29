@@ -1,90 +1,103 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Topbar from "../../components/Topbar/Topbar";
-
 import "./Dashboard.css";
+
+const API_URL = "http://localhost:5000/api/v1";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
-  // ============================================
-  // STATE
-  // ============================================
 
   const [data, setData] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ============================================
-  // FETCH DASHBOARD DATA
-  // ============================================
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_URL}/dashboard`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      const result = await response.json();
+
+      console.log("Dashboard API response:", result);
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+            "Failed to load dashboard"
+        );
+      }
+
+      if (!result.user) {
+        throw new Error(
+          "User information was not returned by the server."
+        );
+      }
+
+      setUser(result.user);
+      setData(result);
+    } catch (error) {
+      console.error("Dashboard Error:", error);
+
+      setError(
+        error.message ||
+          "Unable to load dashboard."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    fetchDashboard();
 
-        const response = await fetch(
-          "http://localhost:5000/api/v1/dashboard",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
-
-        const result = await response.json();
-
-        console.log("Dashboard API response:", result);
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || "Failed to load dashboard"
-          );
-        }
-
-        if (!result.user) {
-          throw new Error(
-            "User information was not returned by the server."
-          );
-        }
-
-        setUser(result.user);
-        setData(result);
-      } catch (error) {
-        console.error("Dashboard Error:", error);
-
-        setError(
-          error.message ||
-            "Unable to load dashboard. Please try again."
-        );
-      } finally {
-        setLoading(false);
-      }
+    const refreshDashboard = () => {
+      fetchDashboard();
     };
 
-    fetchDashboard();
-  }, []);
+    window.addEventListener(
+      "statlearn:data-changed",
+      refreshDashboard
+    );
 
-  // ============================================
-  // LOADING STATE
-  // ============================================
+    window.addEventListener(
+      "storage",
+      refreshDashboard
+    );
+
+    return () => {
+      window.removeEventListener(
+        "statlearn:data-changed",
+        refreshDashboard
+      );
+
+      window.removeEventListener(
+        "storage",
+        refreshDashboard
+      );
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="dashboard-loading">
         <h2>Loading Dashboard...</h2>
-        <p>Please wait while we load your learning data.</p>
+        <p>
+          Please wait while we load your learning data.
+        </p>
       </div>
     );
   }
-
-  // ============================================
-  // ERROR STATE
-  // ============================================
 
   if (error) {
     return (
@@ -95,7 +108,7 @@ export default function Dashboard() {
 
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={fetchDashboard}
         >
           Try Again
         </button>
@@ -103,52 +116,98 @@ export default function Dashboard() {
     );
   }
 
-  // ============================================
-  // USER CHECK
-  // ============================================
-
   if (!user || !data) {
     return null;
   }
 
-  // ============================================
-  // DASHBOARD DATA
-  // ============================================
+  const competency =
+    data?.competency || {};
 
-  const skills = data?.competency?.profile || [];
+  const skills =
+    competency?.profile ||
+    data?.competencyProfile ||
+    data?.skills ||
+    [];
+
+  const normalizedSkills = Array.isArray(skills)
+    ? skills
+    : Object.entries(skills).map(
+        ([name, item]) => ({
+          competencyName:
+            item?.competencyName ||
+            item?.skill ||
+            name,
+          score: Number(
+            item?.score ??
+              item?.latestScore ??
+              item?.initialScore ??
+              0
+          ),
+        })
+      );
 
   const overall = Number(
-    data?.competency?.overall || 0
+    competency?.overall ??
+      data?.overallCompetency ??
+      data?.overall ??
+      0
   );
 
   const skillsAssessed = Number(
-    data?.competency?.skillsAssessed ||
-      skills.length
+    competency?.skillsAssessed ??
+      data?.skillsAssessed ??
+      normalizedSkills.length
   );
 
-  const quiz = data?.quiz?.latest || null;
+  const quiz =
+    data?.quiz?.latest ||
+    data?.latestQuiz ||
+    data?.quiz ||
+    null;
+
+  const assessment =
+    data?.assessment?.latest ||
+    data?.latestAssessment ||
+    data?.assessment ||
+    null;
+
+  const training =
+    data?.training || {};
 
   const trainingCompleted = Number(
-    data?.training?.completed || 0
+    training?.completed ??
+      training?.completedCount ??
+      data?.trainingCompleted ??
+      0
   );
 
-  // ============================================
-  // SKILL GAPS
-  // ============================================
+  const trainingTotal = Number(
+    training?.total ??
+      training?.totalModules ??
+      0
+  );
 
-  const skillGaps = skills
+  const trainingProgress =
+    trainingTotal > 0
+      ? Math.round(
+          (trainingCompleted /
+            trainingTotal) *
+            100
+        )
+      : trainingCompleted > 0
+      ? 100
+      : 0;
+
+  const skillGaps = normalizedSkills
     .filter(
-      (item) => Number(item.score || 0) < 80
+      (item) =>
+        Number(item.score || 0) < 80
     )
     .sort(
       (a, b) =>
         Number(a.score || 0) -
         Number(b.score || 0)
     );
-
-  // ============================================
-  // HELPER
-  // ============================================
 
   const getGapLevel = (score) => {
     if (score < 60) {
@@ -162,42 +221,24 @@ export default function Dashboard() {
     return "Low";
   };
 
-  // ============================================
-  // RENDER
-  // ============================================
+  const userName =
+    user?.name ||
+    user?.fullName ||
+    user?.username ||
+    "Student";
 
   return (
     <div className="dashboard">
-
-      {/* ========================================
-          SIDEBAR
-      ========================================= */}
-
       <Sidebar />
 
-      {/* ========================================
-          MAIN CONTENT
-      ========================================= */}
-
       <div className="dashboard-main">
-
         <Topbar />
 
         <main className="dashboard-content">
-
-          {/* ======================================
-              WELCOME SECTION
-          ======================================= */}
-
           <section className="welcome-section">
-
             <div>
               <h2>
-                Welcome back,{" "}
-                {user.name ||
-                  user.fullName ||
-                  "Student"}{" "}
-               ! 👋
+                Welcome back, {userName}! 👋
               </h2>
 
               <p>
@@ -215,19 +256,10 @@ export default function Dashboard() {
             >
               Take Skill Assessment →
             </button>
-
           </section>
 
-          {/* ======================================
-              STATISTICS
-          ======================================= */}
-
           <section className="stats-grid">
-
-            {/* Overall Competency */}
-
             <div className="stat-card">
-
               <div className="stat-icon">
                 ✓
               </div>
@@ -242,18 +274,14 @@ export default function Dashboard() {
                 </h3>
 
                 <span className="positive">
-                  {skills.length
+                  {skillsAssessed
                     ? "Based on assessed skills"
                     : "No assessment yet"}
                 </span>
               </div>
-
             </div>
 
-            {/* Skills Assessed */}
-
             <div className="stat-card">
-
               <div className="stat-icon">
                 ◈
               </div>
@@ -273,13 +301,9 @@ export default function Dashboard() {
                     : "Start your first assessment"}
                 </span>
               </div>
-
             </div>
 
-            {/* Training Completed */}
-
             <div className="stat-card">
-
               <div className="stat-icon">
                 ▣
               </div>
@@ -294,16 +318,14 @@ export default function Dashboard() {
                 </h3>
 
                 <span>
-                  Modules completed
+                  {trainingTotal > 0
+                    ? `${trainingCompleted}/${trainingTotal} modules`
+                    : "Modules completed"}
                 </span>
               </div>
-
             </div>
 
-            {/* Quiz Score */}
-
             <div className="stat-card">
-
               <div className="stat-icon">
                 ★
               </div>
@@ -315,35 +337,24 @@ export default function Dashboard() {
 
                 <h3>
                   {quiz
-                    ? `${quiz.percentage}%`
+                    ? `${Number(
+                        quiz.percentage ?? 0
+                      )}%`
                     : "—"}
                 </h3>
 
                 <span className="positive">
                   {quiz
-                    ? "Latest quiz"
+                    ? `Latest ${quiz.skill || "quiz"} quiz`
                     : "No quiz completed yet"}
                 </span>
               </div>
-
             </div>
-
           </section>
 
-          {/* ======================================
-              COMPETENCY + SKILL GAPS
-          ======================================= */}
-
           <section className="dashboard-grid">
-
-            {/* ====================================
-                COMPETENCY OVERVIEW
-            ===================================== */}
-
             <div className="dashboard-card competency-card">
-
               <div className="card-header">
-
                 <div>
                   <h3>
                     Competency Overview
@@ -362,89 +373,71 @@ export default function Dashboard() {
                 >
                   View Details
                 </button>
-
               </div>
 
-              {skills.length > 0 ? (
+              {normalizedSkills.length > 0 ? (
+                normalizedSkills.map(
+                  (item, index) => {
+                    const skill =
+                      item.competencyName ||
+                      item.skill ||
+                      `Skill ${index + 1}`;
 
-                skills.map((item) => {
+                    const score = Math.min(
+                      Math.max(
+                        Number(
+                          item.score || 0
+                        ),
+                        0
+                      ),
+                      100
+                    );
 
-                  const skill =
-                    item.competencyName ||
-                    "Unknown Skill";
+                    return (
+                      <div
+                        className="skill"
+                        key={`${skill}-${index}`}
+                      >
+                        <div className="skill-info">
+                          <span>
+                            {skill}
+                          </span>
 
-                  const score = Number(
-                    item.score || 0
-                  );
+                          <strong>
+                            {score}%
+                          </strong>
+                        </div>
 
-                  return (
-                    <div
-                      className="skill"
-                      key={skill}
-                    >
-
-                      <div className="skill-info">
-
-                        <span>
-                          {skill}
-                        </span>
-
-                        <strong>
-                          {score}%
-                        </strong>
-
+                        <div className="progress">
+                          <div
+                            className="progress-fill"
+                            style={{
+                              width: `${score}%`,
+                            }}
+                          />
+                        </div>
                       </div>
-
-                      <div className="progress">
-
-                        <div
-                          className="progress-fill"
-                          style={{
-                            width: `${Math.min(
-                              Math.max(score, 0),
-                              100
-                            )}%`,
-                          }}
-                        />
-
-                      </div>
-
-                    </div>
-                  );
-                })
-
+                    );
+                  }
+                )
               ) : (
-
                 <div className="gap-item">
-
                   <div>
-
                     <strong>
                       No competency data yet
                     </strong>
 
                     <p>
-                      Take a skill assessment
-                      to establish your
-                      competency profile.
+                      Take a skill assessment to
+                      establish your competency profile.
                     </p>
-
                   </div>
-
                 </div>
-
               )}
-
             </div>
 
-            {/* ====================================
-                SKILL GAPS
-            ===================================== */}
-
             <div className="dashboard-card">
-
               <div className="card-header">
-
                 <div>
                   <h3>
                     Skill Gaps
@@ -458,18 +451,16 @@ export default function Dashboard() {
                 <span className="ai-label">
                   AI Powered
                 </span>
-
               </div>
 
               {skillGaps.length > 0 ? (
-
                 skillGaps
                   .slice(0, 3)
-                  .map((item) => {
-
+                  .map((item, index) => {
                     const skill =
                       item.competencyName ||
-                      "Unknown Skill";
+                      item.skill ||
+                      `Skill ${index + 1}`;
 
                     const score = Number(
                       item.score || 0
@@ -481,11 +472,9 @@ export default function Dashboard() {
                     return (
                       <div
                         className="gap-item"
-                        key={skill}
+                        key={`${skill}-${index}`}
                       >
-
                         <div>
-
                           <strong>
                             {skill}
                           </strong>
@@ -494,7 +483,6 @@ export default function Dashboard() {
                             Current level:{" "}
                             {score}%
                           </p>
-
                         </div>
 
                         <span
@@ -502,31 +490,22 @@ export default function Dashboard() {
                         >
                           {level}
                         </span>
-
                       </div>
                     );
                   })
-
               ) : (
-
                 <div className="gap-item">
-
                   <div>
-
                     <strong>
                       No gaps yet
                     </strong>
 
                     <p>
-                      Complete an assessment
-                      to identify areas for
-                      improvement.
+                      Complete an assessment to
+                      identify areas for improvement.
                     </p>
-
                   </div>
-
                 </div>
-
               )}
 
               <button
@@ -539,27 +518,13 @@ export default function Dashboard() {
                 View Personalized
                 Recommendations →
               </button>
-
             </div>
-
           </section>
 
-          {/* ======================================
-              TRAINING + QUIZ
-          ======================================= */}
-
           <section className="bottom-grid">
-
-            {/* ====================================
-                RECOMMENDED TRAINING
-            ===================================== */}
-
             <div className="dashboard-card">
-
               <div className="card-header">
-
                 <div>
-
                   <h3>
                     Recommended Training
                   </h3>
@@ -567,7 +532,6 @@ export default function Dashboard() {
                   <p>
                     Based on your competency gaps
                   </p>
-
                 </div>
 
                 <button
@@ -578,74 +542,85 @@ export default function Dashboard() {
                 >
                   View All
                 </button>
-
               </div>
 
               <div className="training-item">
-
                 <div className="training-icon">
                   📚
                 </div>
 
                 <div className="training-info">
-
                   <h4>
-                    {skills.length > 0
-                      ? "Personalized Learning Path"
+                    {skillGaps.length > 0
+                      ? `${skillGaps[0].competencyName || skillGaps[0].skill} Learning Path`
+                      : normalizedSkills.length > 0
+                      ? "Continue Your Learning"
                       : "Start with a Skill Assessment"}
                   </h4>
 
                   <p>
-                    {skills.length > 0
-                      ? "Practice the areas where your competency is below target."
+                    {skillGaps.length > 0
+                      ? `Improve your ${skillGaps[0].competencyName || skillGaps[0].skill} competency through personalized training.`
+                      : normalizedSkills.length > 0
+                      ? "Continue learning to strengthen your competencies."
                       : "Complete an assessment to receive personalized training."}
                   </p>
-
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
                     navigate(
-                      skills.length > 0
+                      normalizedSkills.length > 0
                         ? "/training"
                         : "/skill-selection"
                     )
                   }
                 >
-                  {skills.length > 0
+                  {normalizedSkills.length > 0
                     ? "Start"
                     : "Assess"}
                 </button>
-
               </div>
 
+              {trainingCompleted > 0 && (
+                <div className="training-progress">
+                  <div>
+                    <span>
+                      Training Progress
+                    </span>
+
+                    <strong>
+                      {trainingProgress}%
+                    </strong>
+                  </div>
+
+                  <div className="progress">
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: `${trainingProgress}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* ====================================
-                NEXT ASSESSMENT / QUIZ
-            ===================================== */}
-
             <div className="dashboard-card">
-
               <div className="card-header">
-
                 <div>
-
                   <h3>
-                    Next Assessment
+                    Next Assessment / Quiz
                   </h3>
 
                   <p>
                     Test your knowledge
                   </p>
-
                 </div>
-
               </div>
 
               <div className="quiz-box">
-
                 <div className="quiz-icon">
                   🧠
                 </div>
@@ -659,8 +634,26 @@ export default function Dashboard() {
                   level-specific MCQs.
                 </p>
 
-                <div className="quiz-details">
+                {quiz && (
+                  <div className="quiz-last-result">
+                    <strong>
+                      Latest Score:{" "}
+                      {Number(
+                        quiz.percentage ?? 0
+                      )}
+                      %
+                    </strong>
 
+                    <span>
+                      {quiz.skill || "Quiz"}
+                      {quiz.level
+                        ? ` • ${quiz.level}`
+                        : ""}
+                    </span>
+                  </div>
+                )}
+
+                <div className="quiz-details">
                   <span>
                     ⏱ Practice
                   </span>
@@ -668,7 +661,6 @@ export default function Dashboard() {
                   <span>
                     🎯 Adaptive
                   </span>
-
                 </div>
 
                 <button
@@ -678,19 +670,66 @@ export default function Dashboard() {
                     navigate("/quiz")
                   }
                 >
-                  Start Quiz →
+                  {quiz
+                    ? "Take Another Quiz →"
+                    : "Start Quiz →"}
                 </button>
-
               </div>
-
             </div>
-
           </section>
 
+          {assessment && (
+            <section className="dashboard-card">
+              <div className="card-header">
+                <div>
+                  <h3>
+                    Latest Assessment
+                  </h3>
+
+                  <p>
+                    Your most recent competency
+                    assessment
+                  </p>
+                </div>
+              </div>
+
+              <div className="training-item">
+                <div className="training-icon">
+                  📊
+                </div>
+
+                <div className="training-info">
+                  <h4>
+                    {assessment.skill ||
+                      "Skill Assessment"}
+                  </h4>
+
+                  <p>
+                    Score:{" "}
+                    {Number(
+                      assessment.percentage ??
+                        assessment.score ??
+                        0
+                    )}
+                    %
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      "/assessment"
+                    )
+                  }
+                >
+                  Assess Again
+                </button>
+              </div>
+            </section>
+          )}
         </main>
-
       </div>
-
     </div>
   );
 }
